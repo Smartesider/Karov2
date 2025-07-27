@@ -1,0 +1,357 @@
+{% extends "core/base.html" %}
+{% load static %}
+{% load widget_tweaks %}
+
+{% block title %}Fagpakker - JuridiskPorten{% endblock %}
+
+{% block extra_head %}
+<style>
+.package-card {
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+}
+
+.package-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+    border-color: #D3B16D;
+}
+
+.package-price {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #3E4D50;
+}
+
+.package-features {
+    min-height: 120px;
+}
+
+.btn-add-to-cart {
+    background: linear-gradient(135deg, #D3B16D, #b8965a);
+    border: none;
+    color: white;
+    transition: all 0.3s ease;
+}
+
+.btn-add-to-cart:hover {
+    background: linear-gradient(135deg, #b8965a, #9a7a47);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(211, 177, 109, 0.4);
+}
+
+.cart-indicator {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+    background: #3E4D50;
+    color: white;
+    border-radius: 50px;
+    padding: 12px 20px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+.package-owned {
+    opacity: 0.7;
+    border-color: #28a745;
+}
+
+.testimonial-card {
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    border-left: 4px solid #D3B16D;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid bg-light py-5">
+    <div class="container">
+        <div class="row text-center mb-5">
+            <div class="col-12">
+                <h1 class="display-4 mb-3" style="color: #3E4D50;">Juridiske Fagpakker</h1>
+                <p class="lead text-muted">Velg den pakken som passer dine behov. Få tilgang til skreddersydd juridisk innhold, skjemaer og ekspertråd.</p>
+            </div>
+        </div>
+
+        <!-- Cart Indicator -->
+        {% if cart_item_count > 0 %}
+        <div class="cart-indicator">
+            <i class="fas fa-shopping-cart"></i>
+            <span id="cart-count">{{ cart_item_count }}</span> i handlekurv
+            <a href="{% url 'core:shopping_cart' %}" class="btn btn-sm btn-outline-light ms-2">Se kurv</a>
+        </div>
+        {% endif %}
+
+        <!-- Featured Packages -->
+        {% if featured_packages %}
+        <div class="row mb-5">
+            <div class="col-12">
+                <h2 class="text-center mb-4" style="color: #3E4D50;">⭐ Anbefalte Pakker</h2>
+                <div class="row">
+                    {% for package in featured_packages %}
+                    <div class="col-md-4 mb-4">
+                        <div class="card package-card h-100 {% if package.id in user_packages %}package-owned{% endif %}">
+                            <div class="card-header text-center" style="background: linear-gradient(135deg, {{ package.color_primary }}, {{ package.color_secondary }});">
+                                <h5 class="card-title text-white mb-0">
+                                    {% if package.icon %}<i class="{{ package.icon }} me-2"></i>{% endif %}
+                                    {{ package.name }}
+                                </h5>
+                            </div>
+                            <div class="card-body d-flex flex-column">
+                                <p class="card-text">{{ package.description|truncatewords:20 }}</p>
+                                
+                                <div class="package-features mb-3">
+                                    {% if package.features %}
+                                    <ul class="list-unstyled">
+                                        {% for feature in package.features|slice:":3" %}
+                                        <li><i class="fas fa-check text-success me-2"></i>{{ feature }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                    {% endif %}
+                                </div>
+
+                                <div class="mt-auto">
+                                    <div class="text-center mb-3">
+                                        <span class="package-price">{{ package.price|floatformat:0 }} kr</span>
+                                        {% if package.monthly_price %}
+                                        <small class="text-muted d-block">eller {{ package.monthly_price|floatformat:0 }} kr/mnd</small>
+                                        {% endif %}
+                                    </div>
+                                    
+                                    {% if package.id in user_packages %}
+                                    <button class="btn btn-success w-100" disabled>
+                                        <i class="fas fa-check me-2"></i>Du har denne pakken
+                                    </button>
+                                    {% else %}
+                                    <button class="btn btn-add-to-cart w-100" 
+                                            onclick="addToCart('{{ package.id }}', '{{ package.name }}')">
+                                        <i class="fas fa-cart-plus me-2"></i>Legg til i kurv
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- All Packages -->
+        <div class="row mb-5">
+            <div class="col-12">
+                <h2 class="text-center mb-4" style="color: #3E4D50;">Alle Fagpakker</h2>
+                <div class="row">
+                    {% for package in packages %}
+                    <div class="col-lg-6 col-xl-4 mb-4">
+                        <div class="card package-card h-100 {% if package.id in user_packages %}package-owned{% endif %}">
+                            {% if package.banner_image %}
+                            <img src="{{ package.banner_image.url }}" class="card-img-top" alt="{{ package.name }}" style="height: 200px; object-fit: cover;">
+                            {% endif %}
+                            
+                            <div class="card-header text-center" style="background: linear-gradient(135deg, {{ package.color_primary }}, {{ package.color_secondary }});">
+                                <h5 class="card-title text-white mb-0">
+                                    {% if package.icon %}<i class="{{ package.icon }} me-2"></i>{% endif %}
+                                    {{ package.name }}
+                                </h5>
+                            </div>
+                            
+                            <div class="card-body d-flex flex-column">
+                                <p class="card-text">{{ package.description }}</p>
+                                
+                                {% if package.target_audience %}
+                                <div class="mb-3">
+                                    <strong>Målgruppe:</strong>
+                                    <ul class="list-unstyled mt-1">
+                                        {% for audience in package.target_audience|slice:":3" %}
+                                        <li><small class="text-muted">• {{ audience }}</small></li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                                {% endif %}
+
+                                {% if package.features %}
+                                <div class="package-features mb-3">
+                                    <strong>Inkludert:</strong>
+                                    <ul class="list-unstyled mt-1">
+                                        {% for feature in package.features|slice:":4" %}
+                                        <li><i class="fas fa-check text-success me-2"></i>{{ feature }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                                {% endif %}
+
+                                <div class="mt-auto">
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <div>
+                                            <span class="package-price">{{ package.price|floatformat:0 }} kr</span>
+                                            {% if package.monthly_price %}
+                                            <small class="text-muted d-block">{{ package.monthly_price|floatformat:0 }} kr/mnd</small>
+                                            {% endif %}
+                                        </div>
+                                        <div class="text-end">
+                                            <small class="text-muted">{{ package.trial_period_days }} dagers prøveperiode</small>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="d-grid gap-2">
+                                        {% if package.id in user_packages %}
+                                        <button class="btn btn-success" disabled>
+                                            <i class="fas fa-check me-2"></i>Du har denne pakken
+                                        </button>
+                                        {% else %}
+                                        <button class="btn btn-add-to-cart" 
+                                                onclick="addToCart('{{ package.id }}', '{{ package.name }}')">
+                                            <i class="fas fa-cart-plus me-2"></i>Legg til i kurv
+                                        </button>
+                                        {% endif %}
+                                        <a href="{% url 'core:package_detail_shop' package.slug %}" 
+                                           class="btn btn-outline-secondary">
+                                            <i class="fas fa-info-circle me-2"></i>Les mer
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Trust Indicators -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card testimonial-card">
+                    <div class="card-body text-center">
+                        <h3 class="mb-4" style="color: #3E4D50;">Hvorfor velge JuridiskPorten?</h3>
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <i class="fas fa-shield-alt fa-3x text-primary mb-3"></i>
+                                <h5>Sikker og pålitelig</h5>
+                                <p class="text-muted">Alle juridiske ressurser er kvalitetssikret av erfarne jurister</p>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <i class="fas fa-clock fa-3x text-warning mb-3"></i>
+                                <h5>Oppdatert innhold</h5>
+                                <p class="text-muted">Løpende oppdateringer med ny lovgivning og rettsutvikling</p>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <i class="fas fa-users fa-3x text-success mb-3"></i>
+                                <h5>Ekspertråd</h5>
+                                <p class="text-muted">Direkte tilgang til juridiske eksperter via chat og e-post</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast for cart notifications -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3">
+    <div id="cart-toast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header">
+            <strong class="me-auto">Handlekurv</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body" id="cart-toast-body">
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Cart functionality
+function addToCart(packageId, packageName) {
+    fetch(`{% url 'core:add_to_cart' '00000000-0000-0000-0000-000000000000' %}`.replace('00000000-0000-0000-0000-000000000000', packageId), {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+            'csrfmiddlewaretoken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Update cart count
+            updateCartCount(data.cart_item_count);
+            
+            // Show success toast
+            showToast(data.message, 'success');
+            
+            // Update button state
+            const button = event.target;
+            button.innerHTML = '<i class="fas fa-check me-2"></i>Lagt til!';
+            button.classList.remove('btn-add-to-cart');
+            button.classList.add('btn-success');
+            
+            // Reset button after 2 seconds
+            setTimeout(() => {
+                button.innerHTML = '<i class="fas fa-cart-plus me-2"></i>Legg til i kurv';
+                button.classList.remove('btn-success');
+                button.classList.add('btn-add-to-cart');
+            }, 2000);
+        } else {
+            showToast(data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('Det oppstod en feil. Prøv igjen.', 'error');
+    });
+}
+
+function updateCartCount(count) {
+    const cartElement = document.getElementById('cart-count');
+    if (cartElement) {
+        cartElement.textContent = count;
+    }
+    
+    // Show/hide cart indicator
+    const cartIndicator = document.querySelector('.cart-indicator');
+    if (count > 0) {
+        if (!cartIndicator) {
+            // Create cart indicator if it doesn't exist
+            const indicator = document.createElement('div');
+            indicator.className = 'cart-indicator';
+            indicator.innerHTML = `
+                <i class="fas fa-shopping-cart"></i>
+                <span id="cart-count">${count}</span> i handlekurv
+                <a href="{% url 'core:shopping_cart' %}" class="btn btn-sm btn-outline-light ms-2">Se kurv</a>
+            `;
+            document.body.appendChild(indicator);
+        }
+    }
+}
+
+function showToast(message, type) {
+    const toast = document.getElementById('cart-toast');
+    const toastBody = document.getElementById('cart-toast-body');
+    
+    toastBody.textContent = message;
+    
+    // Set toast color based on type
+    toast.className = `toast ${type === 'error' ? 'text-bg-danger' : 'text-bg-success'}`;
+    
+    const bsToast = new bootstrap.Toast(toast);
+    bsToast.show();
+}
+
+// Update cart count on page load
+document.addEventListener('DOMContentLoaded', function() {
+    fetch('{% url "core:cart_count" %}')
+    .then(response => response.json())
+    .then(data => {
+        updateCartCount(data.count);
+    });
+});
+</script>
+{% endblock %}

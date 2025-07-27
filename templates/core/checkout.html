@@ -1,0 +1,424 @@
+{% extends "core/base.html" %}
+{% load static %}
+{% load widget_tweaks %}
+
+{% block title %}Kasse - JuridiskPorten{% endblock %}
+
+{% block extra_head %}
+<style>
+.checkout-section {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.order-summary {
+    background: linear-gradient(135deg, #3E4D50, #A7B9BC);
+    color: white;
+    border-radius: 12px;
+}
+
+.step-indicator {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 2rem;
+}
+
+.step {
+    display: flex;
+    align-items: center;
+    margin: 0 1rem;
+}
+
+.step-number {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #A7B9BC;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    margin-right: 0.5rem;
+}
+
+.step.active .step-number {
+    background: #D3B16D;
+}
+
+.step.completed .step-number {
+    background: #28a745;
+}
+
+.form-floating > label {
+    color: #6c757d;
+}
+
+.btn-place-order {
+    background: linear-gradient(135deg, #D3B16D, #b8965a);
+    border: none;
+    color: white;
+    font-weight: bold;
+    padding: 15px 30px;
+    border-radius: 25px;
+    transition: all 0.3s ease;
+}
+
+.btn-place-order:hover {
+    background: linear-gradient(135deg, #b8965a, #9a7a47);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(211, 177, 109, 0.4);
+}
+
+.security-badges {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.security-badge {
+    text-align: center;
+    padding: 0.5rem;
+}
+
+.package-item {
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <!-- Step Indicator -->
+    <div class="step-indicator">
+        <div class="step completed">
+            <div class="step-number">1</div>
+            <span>Handlekurv</span>
+        </div>
+        <div class="step active">
+            <div class="step-number">2</div>
+            <span>Fakturainformasjon</span>
+        </div>
+        <div class="step">
+            <div class="step-number">3</div>
+            <span>Betaling</span>
+        </div>
+        <div class="step">
+            <div class="step-number">4</div>
+            <span>Bekreftelse</span>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Checkout Form -->
+        <div class="col-lg-8">
+            <div class="checkout-section p-4 mb-4">
+                <h3 class="mb-4" style="color: #3E4D50;">
+                    <i class="fas fa-user me-2"></i>Fakturainformasjon
+                </h3>
+                
+                <form method="post" id="checkout-form">
+                    {% csrf_token %}
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <div class="form-floating">
+                                {{ form.billing_name|add_class:"form-control" }}
+                                <label for="{{ form.billing_name.id_for_label }}">{{ form.billing_name.label }}</label>
+                            </div>
+                            {% if form.billing_name.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in form.billing_name.errors %}
+                                        <small>{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <div class="form-floating">
+                                {{ form.billing_email|add_class:"form-control" }}
+                                <label for="{{ form.billing_email.id_for_label }}">{{ form.billing_email.label }}</label>
+                            </div>
+                            {% if form.billing_email.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in form.billing_email.errors %}
+                                        <small>{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="form-floating">
+                            {{ form.billing_organization|add_class:"form-control" }}
+                            <label for="{{ form.billing_organization.id_for_label }}">{{ form.billing_organization.label }}</label>
+                        </div>
+                        {% if form.billing_organization.errors %}
+                            <div class="text-danger mt-1">
+                                {% for error in form.billing_organization.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="form-floating">
+                            {{ form.billing_address|add_class:"form-control" }}
+                            <label for="{{ form.billing_address.id_for_label }}">{{ form.billing_address.label }}</label>
+                        </div>
+                        {% if form.billing_address.errors %}
+                            <div class="text-danger mt-1">
+                                {% for error in form.billing_address.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <div class="form-floating">
+                                {{ form.billing_city|add_class:"form-control" }}
+                                <label for="{{ form.billing_city.id_for_label }}">{{ form.billing_city.label }}</label>
+                            </div>
+                            {% if form.billing_city.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in form.billing_city.errors %}
+                                        <small>{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <div class="form-floating">
+                                {{ form.billing_postal_code|add_class:"form-control" }}
+                                <label for="{{ form.billing_postal_code.id_for_label }}">{{ form.billing_postal_code.label }}</label>
+                            </div>
+                            {% if form.billing_postal_code.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in form.billing_postal_code.errors %}
+                                        <small>{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <div class="form-floating">
+                            {{ form.customer_notes|add_class:"form-control" }}
+                            <label for="{{ form.customer_notes.id_for_label }}">{{ form.customer_notes.label }}</label>
+                        </div>
+                        {% if form.customer_notes.errors %}
+                            <div class="text-danger mt-1">
+                                {% for error in form.customer_notes.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Terms and Conditions -->
+                    <div class="mb-3">
+                        <div class="form-check">
+                            {{ form.terms_accepted|add_class:"form-check-input" }}
+                            <label class="form-check-label" for="{{ form.terms_accepted.id_for_label }}">
+                                {{ form.terms_accepted.label }}
+                                <a href="#" data-bs-toggle="modal" data-bs-target="#termsModal">Les vilkår</a>
+                            </label>
+                        </div>
+                        {% if form.terms_accepted.errors %}
+                            <div class="text-danger mt-1">
+                                {% for error in form.terms_accepted.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-4">
+                        <div class="form-check">
+                            {{ form.marketing_consent|add_class:"form-check-input" }}
+                            <label class="form-check-label" for="{{ form.marketing_consent.id_for_label }}">
+                                {{ form.marketing_consent.label }}
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'core:shopping_cart' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Tilbake til kurv
+                        </a>
+                        <button type="submit" class="btn btn-place-order">
+                            <i class="fas fa-credit-card me-2"></i>Fortsett til betaling
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Order Summary -->
+        <div class="col-lg-4">
+            <div class="order-summary p-4">
+                <h4 class="mb-4">
+                    <i class="fas fa-receipt me-2"></i>Bestillingssammendrag
+                </h4>
+
+                <!-- Cart Items -->
+                {% for item in cart_items %}
+                <div class="package-item">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h6 class="mb-1">{{ item.package.name }}</h6>
+                        <span class="fw-bold">{{ item.total_price|floatformat:0 }} kr</span>
+                    </div>
+                    <small class="text-light">{{ item.package.description|truncatewords:10 }}</small>
+                    <div class="mt-2">
+                        <small>
+                            <i class="fas fa-clock me-1"></i>{{ item.package.trial_period_days }} dagers prøveperiode
+                        </small>
+                    </div>
+                </div>
+                {% endfor %}
+
+                <hr class="my-3" style="border-color: rgba(255,255,255,0.3);">
+
+                <!-- Pricing Breakdown -->
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Subtotal:</span>
+                        <span>{{ subtotal|floatformat:0 }} kr</span>
+                    </div>
+                    
+                    {% if applied_coupon %}
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Rabatt ({{ applied_coupon.code }}):</span>
+                        <span class="text-success">-{{ discount_amount|floatformat:0 }} kr</span>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>MVA (25%):</span>
+                        <span>{{ final_total|floatformat:0|add:"*0.25"|floatformat:0 }} kr</span>
+                    </div>
+                    
+                    <hr class="my-3" style="border-color: rgba(255,255,255,0.3);">
+                    
+                    <div class="d-flex justify-content-between mb-4">
+                        <strong style="font-size: 1.2rem;">Total:</strong>
+                        <strong style="font-size: 1.2rem;">{{ final_total|floatformat:0 }} kr</strong>
+                    </div>
+                </div>
+
+                <!-- Security Information -->
+                <div class="text-center">
+                    <small class="text-light">
+                        <i class="fas fa-shield-alt me-1"></i>Sikker betaling med SSL-kryptering
+                    </small>
+                    
+                    <div class="security-badges">
+                        <div class="security-badge">
+                            <i class="fab fa-cc-visa fa-2x text-light"></i>
+                        </div>
+                        <div class="security-badge">
+                            <i class="fab fa-cc-mastercard fa-2x text-light"></i>
+                        </div>
+                        <div class="security-badge">
+                            <i class="fas fa-university fa-2x text-light"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Support Information -->
+            <div class="mt-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h6 class="card-title">
+                            <i class="fas fa-headset text-primary me-2"></i>Trenger du hjelp?
+                        </h6>
+                        <p class="card-text">
+                            <small>
+                                Vårt kundeserviceteam er tilgjengelig for å hjelpe deg med spørsmål om bestillingen.
+                            </small>
+                        </p>
+                        <div class="d-grid">
+                            <a href="mailto:support@juridiskporten.no" class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-envelope me-1"></i>Kontakt support
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Terms and Conditions Modal -->
+<div class="modal fade" id="termsModal" tabindex="-1" aria-labelledby="termsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="termsModalLabel">Vilkår og betingelser</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <h6>1. Tjenestebeskrivelse</h6>
+                <p>JuridiskPorten tilbyr juridiske fagpakker med tilgang til artikler, skjemaer, AI-assistanse og ekspertråd.</p>
+                
+                <h6>2. Betaling og tilgang</h6>
+                <p>Ved fullført betaling får du umiddelbar tilgang til valgte pakker. Alle pakker inkluderer en prøveperiode.</p>
+                
+                <h6>3. Angrerett</h6>
+                <p>Du har 14 dagers angrerett fra kjøpsdato. Kontakt kundeservice for refundering.</p>
+                
+                <h6>4. Personvern</h6>
+                <p>Vi behandler dine personopplysninger i henhold til GDPR og vår personvernerklæring.</p>
+                
+                <h6>5. Ansvar</h6>
+                <p>Juridisk råd gitt gjennom plattformen erstatter ikke individuell juridisk bistand fra advokat.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Lukk</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Form validation
+document.getElementById('checkout-form').addEventListener('submit', function(e) {
+    const termsAccepted = document.getElementById('{{ form.terms_accepted.id_for_label }}').checked;
+    
+    if (!termsAccepted) {
+        e.preventDefault();
+        alert('Du må godta vilkårene for å fortsette.');
+        return false;
+    }
+    
+    // Show loading state
+    const submitBtn = this.querySelector('button[type="submit"]');
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Behandler...';
+    submitBtn.disabled = true;
+});
+
+// Auto-format postal code
+document.getElementById('{{ form.billing_postal_code.id_for_label }}').addEventListener('input', function(e) {
+    let value = e.target.value.replace(/\D/g, '');
+    if (value.length > 4) {
+        value = value.substring(0, 4);
+    }
+    e.target.value = value;
+});
+</script>
+{% endblock %}

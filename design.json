@@ -1,0 +1,126 @@
+{
+  "design": {
+    "effects": [
+      {
+        "id": 1,
+        "name": "Smooth fade-in",
+        "appliesTo": ["package cards", "article sections"],
+        "description": "Innhold glir mykt inn når det kommer til syne ved scrolling."
+      },
+      {
+        "id": 2,
+        "name": "Hover-glow (gullramme)",
+        "appliesTo": ["pakke-bokser"],
+        "description": "Lett gullfarget glød rundt kortet ved hover for premium-effekt."
+      },
+      {
+        "id": 3,
+        "name": "(i)-ikon med popup",
+        "appliesTo": ["pakke-informasjon"],
+        "description": "Klikk på informasjonsikon åpner elegant modal med detaljert info."
+      },
+      {
+        "id": 5,
+        "name": "Sticky header",
+        "appliesTo": ["hovedmeny"],
+        "description": "Header fester seg på toppen og skifter bakgrunn ved scroll."
+      },
+      {
+        "id": 7,
+        "name": "Spørsmål/FAQ med accordion",
+        "appliesTo": ["Q&A-seksjonen"],
+        "description": "Klikk for å ekspandere svar, smooth åpne/lukke med fokus og highlight."
+      },
+      {
+        "id": 10,
+        "name": "Personlig velkomst",
+        "appliesTo": ["dashboard"],
+        "description": "Brukerspesifikk hilsen, f.eks. 'Hei Kari!'."
+      },
+      {
+        "id": 11,
+        "name": "Initialbokstav med gull",
+        "appliesTo": ["pakkeoverskrifter"],
+        "description": "Første bokstav i overskrifter har elegant gull-innramming."
+      },
+      {
+        "id": 12,
+        "name": "Første paragraf i kursiv",
+        "appliesTo": ["artikler"],
+        "description": "Første avsnitt i artikkel vises i kursiv med litt større font."
+      },
+      {
+        "id": 13,
+        "name": "Gullstiplede linjedelere",
+        "appliesTo": ["seksjonsinndeling"],
+        "description": "Brukes som visuell separator i artikler og innhold."
+      },
+      {
+        "id": 14,
+        "name": "Håndskrift-font på tittel",
+        "appliesTo": ["logo, signatur"],
+        "description": "Brukes på 'Bj' eller signaturfelt – ikke i vanlig brødtekst."
+      },
+      {
+        "id": 15,
+        "name": "AI-agent med 'hjernesymbol'",
+        "appliesTo": ["AI-komponent"],
+        "description": "Symbol animert med svakt pulserende lys når agenten svarer."
+      },
+      {
+        "id": 16,
+        "name": "Bestillingsflyt med stegvis progresjon",
+        "appliesTo": ["nettbutikk/bestilling"],
+        "description": "Viser brukerens fremdrift i bestillingsprosessen med visuell fremheving."
+      },
+      {
+        "id": 18,
+        "name": "Konfetti ved bestilling",
+        "appliesTo": ["kvitteringsskjerm"],
+        "description": "Diskret gullkonfetti-effekt ved suksessfull bestilling."
+      },
+      {
+        "id": 19,
+        "name": "Flipcard for pakker",
+        "appliesTo": ["pakke-bokser"],
+        "description": "Boksen snur ved hover og viser kortversjon av pakken."
+      },
+      {
+        "id": 24,
+        "name": "Typing-animation i AI",
+        "appliesTo": ["AI-chat"],
+        "description": "Viser animert 'skriver'-effekt mens svar genereres."
+      },
+      {
+        "id": 26,
+        "name": "Glassmorfisme på modals",
+        "appliesTo": ["popup-vinduer"],
+        "description": "Uskarp bakgrunn bak modals for moderne, premiumfølelse."
+      },
+      {
+        "id": 27,
+        "name": "Gradient bakgrunnsseksjoner",
+        "appliesTo": ["seksjonsoverganger"],
+        "description": "Myk overgang fra mørk blågrønn til blågrå mellom seksjoner."
+      },
+      {
+        "id": 28,
+        "name": "Meny-hover med gullskygge",
+        "appliesTo": ["navigasjon"],
+        "description": "Subtil skygge bak menyvalget ved hover – matcher øvrig stil."
+      },
+      {
+        "id": 29,
+        "name": "Dynamisk footer-glans",
+        "appliesTo": ["footer"],
+        "description": "Lysrefleks som beveger seg sakte over footer-rammen (diskret)."
+      },
+      {
+        "id": 30,
+        "name": "Søkelinje med anbefalinger",
+        "appliesTo": ["dashboard, AI-agent"],
+        "description": "Live-autocomplete med anbefalte artikler eller maler mens du skriver."
+      }
+    ]
+  }
+}

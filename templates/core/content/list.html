@@ -1,0 +1,286 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ package.name }} - Content - JuridiskPorten{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50">
+    <!-- Package Header -->
+    <div class="bg-white shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <nav class="flex" aria-label="Breadcrumb">
+                        <ol class="flex items-center space-x-4">
+                            <li>
+                                <a href="{% url 'core:package_list' %}" class="text-gray-400 hover:text-gray-600">
+                                    Packages
+                                </a>
+                            </li>
+                            <li>
+                                <div class="flex items-center">
+                                    <i class="fas fa-chevron-right text-gray-400 mr-4"></i>
+                                    <span class="text-gray-900 font-medium">{{ package.name }}</span>
+                                </div>
+                            </li>
+                        </ol>
+                    </nav>
+                    <h1 class="mt-2 text-2xl font-bold text-gray-900">{{ package.name }}</h1>
+                    <p class="mt-1 text-gray-600">{{ package.description }}</p>
+                </div>
+                <div class="text-right">
+                    <div class="text-sm text-gray-500">{{ contents|length }} of {{ package.content_count }} items</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="lg:grid lg:grid-cols-4 lg:gap-8">
+            <!-- Filters Sidebar -->
+            <div class="lg:col-span-1">
+                <div class="bg-white rounded-lg shadow p-6 sticky top-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Filters</h3>
+                    
+                    <!-- Search -->
+                    <form method="get" class="mb-6">
+                        <label for="search" class="block text-sm font-medium text-gray-700 mb-2">Search</label>
+                        <input type="text" 
+                               name="search" 
+                               id="search"
+                               value="{{ current_search }}"
+                               placeholder="Search content..."
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        
+                        <!-- Preserve other filters -->
+                        {% if current_type %}<input type="hidden" name="type" value="{{ current_type }}">{% endif %}
+                        {% if current_category %}<input type="hidden" name="category" value="{{ current_category }}">{% endif %}
+                        {% if current_sort %}<input type="hidden" name="sort" value="{{ current_sort }}">{% endif %}
+                        
+                        <button type="submit" class="mt-2 w-full btn-primary">
+                            <i class="fas fa-search mr-2"></i>Search
+                        </button>
+                    </form>
+                    
+                    <!-- Content Type Filter -->
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Content Type</label>
+                        <select name="type" onchange="filterContent()" id="type-filter" 
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="">All Types</option>
+                            {% for value, label in content_types %}
+                            <option value="{{ value }}" {% if current_type == value %}selected{% endif %}>
+                                {{ label }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <!-- Category Filter -->
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Category</label>
+                        <select name="category" onchange="filterContent()" id="category-filter"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="">All Categories</option>
+                            {% for category in categories %}
+                            <option value="{{ category.id }}" {% if current_category == category.id|stringformat:"s" %}selected{% endif %}>
+                                {{ category.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <!-- Sort Options -->
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Sort By</label>
+                        <select name="sort" onchange="filterContent()" id="sort-filter"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="priority" {% if current_sort == "priority" %}selected{% endif %}>Priority</option>
+                            <option value="newest" {% if current_sort == "newest" %}selected{% endif %}>Newest First</option>
+                            <option value="oldest" {% if current_sort == "oldest" %}selected{% endif %}>Oldest First</option>
+                            <option value="title" {% if current_sort == "title" %}selected{% endif %}>Title A-Z</option>
+                            <option value="popular" {% if current_sort == "popular" %}selected{% endif %}>Most Popular</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Clear Filters -->
+                    <a href="{% url 'core:content_list' package.slug %}" 
+                       class="block w-full text-center py-2 text-gray-600 hover:text-gray-900 transition-colors">
+                        Clear All Filters
+                    </a>
+                </div>
+            </div>
+
+            <!-- Content Grid -->
+            <div class="lg:col-span-3 mt-8 lg:mt-0">
+                {% if contents %}
+                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                    {% for content in contents %}
+                    <div class="bg-white rounded-lg shadow-lg overflow-hidden content-card">
+                        {% if content.image %}
+                        <img src="{{ content.image.url }}" alt="{{ content.title }}" 
+                             class="w-full h-48 object-cover">
+                        {% else %}
+                        <div class="w-full h-48 bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                            <i class="fas fa-file-alt text-3xl text-white"></i>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="p-6">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                    {{ content.get_content_type_display }}
+                                </span>
+                                
+                                {% if user.is_authenticated %}
+                                <button onclick="toggleBookmark('{{ content.id }}')" 
+                                        id="bookmark-btn-{{ content.id }}"
+                                        class="text-gray-400 hover:text-yellow-500 transition-colors">
+                                    <i class="{% if content.id in bookmarked_content_ids %}fas{% else %}far{% endif %} fa-bookmark"></i>
+                                </button>
+                                {% endif %}
+                            </div>
+                            
+                            <h3 class="text-lg font-semibold text-gray-900 mb-2 line-clamp-2">
+                                {{ content.title }}
+                            </h3>
+                            
+                            <p class="text-gray-600 text-sm mb-4 line-clamp-3">
+                                {{ content.excerpt|default:content.content|striptags|truncatewords:20 }}
+                            </p>
+                            
+                            <div class="flex items-center justify-between text-xs text-gray-500 mb-4">
+                                <span><i class="far fa-eye mr-1"></i>{{ content.view_count }} views</span>
+                                <span><i class="far fa-clock mr-1"></i>{{ content.average_reading_time }} min read</span>
+                            </div>
+                            
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center text-xs text-gray-500">
+                                    <span>{{ content.category.name }}</span>
+                                    {% if content.file_attachment %}
+                                    <span class="ml-2 px-2 py-1 bg-green-100 text-green-800 rounded">
+                                        {{ content.file_extension }}
+                                    </span>
+                                    {% endif %}
+                                </div>
+                                
+                                <a href="{% url 'core:content_detail' package.slug content.slug %}" 
+                                   class="btn-primary text-sm">
+                                    Read More
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Pagination -->
+                {% if is_paginated %}
+                <div class="mt-12 flex justify-center">
+                    <div class="flex space-x-2">
+                        {% if page_obj.has_previous %}
+                        <a href="?page=1{% if current_search %}&search={{ current_search }}{% endif %}{% if current_type %}&type={{ current_type }}{% endif %}{% if current_category %}&category={{ current_category }}{% endif %}{% if current_sort %}&sort={{ current_sort }}{% endif %}" 
+                           class="px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
+                            First
+                        </a>
+                        <a href="?page={{ page_obj.previous_page_number }}{% if current_search %}&search={{ current_search }}{% endif %}{% if current_type %}&type={{ current_type }}{% endif %}{% if current_category %}&category={{ current_category }}{% endif %}{% if current_sort %}&sort={{ current_sort }}{% endif %}" 
+                           class="px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
+                            Previous
+                        </a>
+                        {% endif %}
+                        
+                        <span class="px-3 py-2 bg-blue-600 text-white rounded-md">
+                            Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                        </span>
+                        
+                        {% if page_obj.has_next %}
+                        <a href="?page={{ page_obj.next_page_number }}{% if current_search %}&search={{ current_search }}{% endif %}{% if current_type %}&type={{ current_type }}{% endif %}{% if current_category %}&category={{ current_category }}{% endif %}{% if current_sort %}&sort={{ current_sort }}{% endif %}" 
+                           class="px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
+                            Next
+                        </a>
+                        <a href="?page={{ page_obj.paginator.num_pages }}{% if current_search %}&search={{ current_search }}{% endif %}{% if current_type %}&type={{ current_type }}{% endif %}{% if current_category %}&category={{ current_category }}{% endif %}{% if current_sort %}&sort={{ current_sort }}{% endif %}" 
+                           class="px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
+                            Last
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% else %}
+                <div class="text-center py-12">
+                    <i class="fas fa-search text-4xl text-gray-400 mb-4"></i>
+                    <h3 class="text-lg font-medium text-gray-900 mb-2">No content found</h3>
+                    <p class="text-gray-600">Try adjusting your filters or search terms.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function filterContent() {
+    const type = document.getElementById('type-filter').value;
+    const category = document.getElementById('category-filter').value;
+    const sort = document.getElementById('sort-filter').value;
+    const search = '{{ current_search }}';
+    
+    let url = '{% url "core:content_list" package.slug %}?';
+    if (search) url += `search=${encodeURIComponent(search)}&`;
+    if (type) url += `type=${type}&`;
+    if (category) url += `category=${category}&`;
+    if (sort) url += `sort=${sort}&`;
+    
+    window.location.href = url;
+}
+
+function toggleBookmark(contentId) {
+    fetch('{% url "core:toggle_bookmark" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: `content_id=${contentId}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        const btn = document.getElementById(`bookmark-btn-${contentId}`);
+        const icon = btn.querySelector('i');
+        
+        if (data.status === 'bookmarked') {
+            icon.className = 'fas fa-bookmark';
+        } else {
+            icon.className = 'far fa-bookmark';
+        }
+    })
+    .catch(error => console.error('Error:', error));
+}
+</script>
+
+<style>
+.content-card {
+    transition: transform 0.2s, box-shadow 0.3s;
+}
+
+.content-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+.line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+</style>
+{% endblock %}

@@ -1,0 +1,350 @@
+{% extends "core/base.html" %}
+{% load static %}
+{% load widget_tweaks %}
+
+{% block title %}Handlekurv - JuridiskPorten{% endblock %}
+
+{% block extra_head %}
+<style>
+.cart-item {
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.cart-item:hover {
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.cart-summary {
+    background: linear-gradient(135deg, #3E4D50, #A7B9BC);
+    color: white;
+    border-radius: 12px;
+}
+
+.btn-checkout {
+    background: linear-gradient(135deg, #D3B16D, #b8965a);
+    border: none;
+    color: white;
+    font-weight: bold;
+    padding: 12px 30px;
+    border-radius: 25px;
+    transition: all 0.3s ease;
+}
+
+.btn-checkout:hover {
+    background: linear-gradient(135deg, #b8965a, #9a7a47);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(211, 177, 109, 0.4);
+}
+
+.empty-cart {
+    min-height: 60vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.coupon-form {
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 2px dashed #dee2e6;
+}
+
+.package-price {
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: #3E4D50;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="mb-4" style="color: #3E4D50;">
+                <i class="fas fa-shopping-cart me-3"></i>Handlekurv
+            </h1>
+        </div>
+    </div>
+
+    {% if cart_items %}
+    <div class="row">
+        <!-- Cart Items -->
+        <div class="col-lg-8">
+            {% for item in cart_items %}
+            <div class="cart-item p-4 mb-3">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h5 class="mb-2">{{ item.package.name }}</h5>
+                        <p class="text-muted mb-2">{{ item.package.description|truncatewords:15 }}</p>
+                        
+                        {% if item.package.features %}
+                        <div class="mb-2">
+                            <small class="text-muted">Inkluderer:</small>
+                            <ul class="list-inline mb-0">
+                                {% for feature in item.package.features|slice:":3" %}
+                                <li class="list-inline-item">
+                                    <small class="badge bg-light text-dark">{{ feature }}</small>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endif %}
+                        
+                        <small class="text-muted">
+                            <i class="fas fa-clock me-1"></i>{{ item.package.trial_period_days }} dagers prøveperiode
+                        </small>
+                    </div>
+                    
+                    <div class="col-md-2 text-center">
+                        <div class="mb-2">
+                            <strong>Antall:</strong>
+                        </div>
+                        <span class="badge bg-secondary fs-6">{{ item.quantity }}</span>
+                    </div>
+                    
+                    <div class="col-md-2 text-end">
+                        <div class="package-price mb-2">
+                            {{ item.total_price|floatformat:0 }} kr
+                        </div>
+                        <button class="btn btn-sm btn-outline-danger" 
+                                onclick="removeFromCart('{{ item.package.id }}', '{{ item.package.name }}')">
+                            <i class="fas fa-trash me-1"></i>Fjern
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+
+            <!-- Coupon Form -->
+            <div class="coupon-form p-4 mb-4">
+                <h6 class="mb-3">
+                    <i class="fas fa-tag me-2"></i>Har du en kupongkode?
+                </h6>
+                <form id="coupon-form" class="row g-3">
+                    {% csrf_token %}
+                    <div class="col-md-8">
+                        <input type="text" 
+                               class="form-control" 
+                               name="coupon_code" 
+                               id="coupon_code"
+                               placeholder="Skriv inn kupongkode"
+                               style="text-transform: uppercase;">
+                    </div>
+                    <div class="col-md-4">
+                        <button type="submit" class="btn btn-outline-primary w-100">
+                            <i class="fas fa-check me-1"></i>Bruk kupong
+                        </button>
+                    </div>
+                </form>
+                <div id="coupon-message" class="mt-2"></div>
+            </div>
+
+            <!-- Continue Shopping -->
+            <div class="text-center">
+                <a href="{% url 'core:package_showcase' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Fortsett å handle
+                </a>
+            </div>
+        </div>
+
+        <!-- Order Summary -->
+        <div class="col-lg-4">
+            <div class="cart-summary p-4">
+                <h4 class="mb-4">
+                    <i class="fas fa-receipt me-2"></i>Bestillingssammendrag
+                </h4>
+                
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Subtotal:</span>
+                        <span id="subtotal">{{ total_price|floatformat:0 }} kr</span>
+                    </div>
+                    
+                    <div id="discount-row" class="d-flex justify-content-between mb-2" style="display: none !important;">
+                        <span>Rabatt:</span>
+                        <span id="discount-amount" class="text-success">-0 kr</span>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>MVA (25%):</span>
+                        <span id="tax-amount">{{ total_price|floatformat:0|add:"*0.25"|floatformat:0 }} kr</span>
+                    </div>
+                    
+                    <hr class="my-3" style="border-color: rgba(255,255,255,0.3);">
+                    
+                    <div class="d-flex justify-content-between mb-4">
+                        <strong style="font-size: 1.2rem;">Total:</strong>
+                        <strong id="final-total" style="font-size: 1.2rem;">{{ total_price|floatformat:0 }} kr</strong>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <small class="text-light">
+                        <i class="fas fa-shield-alt me-1"></i>Sikker betaling med Stripe
+                    </small>
+                </div>
+
+                <div class="d-grid">
+                    {% if user.is_authenticated %}
+                    <a href="{% url 'core:checkout' %}" class="btn btn-checkout btn-lg">
+                        <i class="fas fa-credit-card me-2"></i>Gå til kassen
+                    </a>
+                    {% else %}
+                    <a href="{% url 'core:login' %}?next={% url 'core:checkout' %}" 
+                       class="btn btn-checkout btn-lg">
+                        <i class="fas fa-sign-in-alt me-2"></i>Logg inn for å bestille
+                    </a>
+                    {% endif %}
+                </div>
+
+                <div class="mt-3 text-center">
+                    <small class="text-light">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Alle pakker inkluderer {{ cart_items.0.package.trial_period_days }} dagers prøveperiode
+                    </small>
+                </div>
+            </div>
+
+            <!-- Trust Indicators -->
+            <div class="mt-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h6 class="card-title">
+                            <i class="fas fa-shield-alt text-success me-2"></i>Trygg handel
+                        </h6>
+                        <ul class="list-unstyled mb-0">
+                            <li><small><i class="fas fa-check text-success me-2"></i>Sikker betaling</small></li>
+                            <li><small><i class="fas fa-check text-success me-2"></i>Prøveperiode på alle pakker</small></li>
+                            <li><small><i class="fas fa-check text-success me-2"></i>Øyeblikkelig tilgang</small></li>
+                            <li><small><i class="fas fa-check text-success me-2"></i>24/7 kundestøtte</small></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% else %}
+    <!-- Empty Cart -->
+    <div class="empty-cart">
+        <div class="text-center">
+            <i class="fas fa-shopping-cart fa-5x text-muted mb-4"></i>
+            <h3 class="mb-3" style="color: #3E4D50;">Handlekurven din er tom</h3>
+            <p class="text-muted mb-4">Utforsk våre juridiske fagpakker og legg til det du trenger.</p>
+            <a href="{% url 'core:package_showcase' %}" class="btn btn-checkout btn-lg">
+                <i class="fas fa-search me-2"></i>Utforsk fagpakker
+            </a>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Toast for notifications -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3">
+    <div id="notification-toast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header">
+            <strong class="me-auto">Handlekurv</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body" id="toast-body">
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Remove item from cart
+function removeFromCart(packageId, packageName) {
+    if (!confirm(`Er du sikker på at du vil fjerne "${packageName}" fra handlekurven?`)) {
+        return;
+    }
+
+    fetch(`{% url 'core:remove_from_cart' '00000000-0000-0000-0000-000000000000' %}`.replace('00000000-0000-0000-0000-000000000000', packageId), {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+            'csrfmiddlewaretoken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast(data.message, 'success');
+            // Reload page to update cart
+            setTimeout(() => {
+                location.reload();
+            }, 1000);
+        } else {
+            showToast(data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('Det oppstod en feil. Prøv igjen.', 'error');
+    });
+}
+
+// Apply coupon
+document.getElementById('coupon-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    
+    fetch('{% url "core:apply_coupon" %}', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        const messageDiv = document.getElementById('coupon-message');
+        
+        if (data.success) {
+            messageDiv.innerHTML = `<div class="alert alert-success alert-sm">${data.message}</div>`;
+            
+            // Update prices
+            document.getElementById('discount-amount').textContent = `-${data.discount_amount} kr`;
+            document.getElementById('final-total').textContent = `${data.final_total} kr`;
+            document.getElementById('discount-row').style.display = 'flex';
+            
+            // Disable form
+            document.getElementById('coupon_code').disabled = true;
+            this.querySelector('button').disabled = true;
+            this.querySelector('button').innerHTML = '<i class="fas fa-check me-1"></i>Kupong anvendt';
+            
+        } else {
+            messageDiv.innerHTML = `<div class="alert alert-danger alert-sm">${data.error}</div>`;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        document.getElementById('coupon-message').innerHTML = 
+            '<div class="alert alert-danger alert-sm">Det oppstod en feil. Prøv igjen.</div>';
+    });
+});
+
+function showToast(message, type) {
+    const toast = document.getElementById('notification-toast');
+    const toastBody = document.getElementById('toast-body');
+    
+    toastBody.textContent = message;
+    
+    // Set toast color based on type
+    toast.className = `toast ${type === 'error' ? 'text-bg-danger' : 'text-bg-success'}`;
+    
+    const bsToast = new bootstrap.Toast(toast);
+    bsToast.show();
+}
+
+// Auto-uppercase coupon code
+document.getElementById('coupon_code').addEventListener('input', function(e) {
+    e.target.value = e.target.value.toUpperCase();
+});
+</script>
+{% endblock %}

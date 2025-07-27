@@ -1,0 +1,450 @@
+{% extends "core/base.html" %}
+{% load static %}
+
+{% block title %}Betaling - JuridiskPorten{% endblock %}
+
+{% block extra_head %}
+<script src="https://js.stripe.com/v3/"></script>
+<style>
+.payment-section {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    min-height: 500px;
+}
+
+.order-summary {
+    background: linear-gradient(135deg, #3E4D50, #A7B9BC);
+    color: white;
+    border-radius: 12px;
+}
+
+.step-indicator {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 2rem;
+}
+
+.step {
+    display: flex;
+    align-items: center;
+    margin: 0 1rem;
+}
+
+.step-number {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #28a745;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    margin-right: 0.5rem;
+}
+
+.step.active .step-number {
+    background: #D3B16D;
+}
+
+.step.completed .step-number {
+    background: #28a745;
+}
+
+#card-element {
+    padding: 12px;
+    border: 1px solid #ced4da;
+    border-radius: 8px;
+    background: white;
+    margin-bottom: 1rem;
+}
+
+#card-errors {
+    color: #fa755a;
+    margin-top: 0.5rem;
+}
+
+.btn-pay-now {
+    background: linear-gradient(135deg, #D3B16D, #b8965a);
+    border: none;
+    color: white;
+    font-weight: bold;
+    padding: 15px 30px;
+    border-radius: 25px;
+    transition: all 0.3s ease;
+    width: 100%;
+    font-size: 1.1rem;
+}
+
+.btn-pay-now:hover:not(:disabled) {
+    background: linear-gradient(135deg, #b8965a, #9a7a47);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(211, 177, 109, 0.4);
+}
+
+.btn-pay-now:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.payment-loader {
+    display: none;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 10;
+}
+
+.security-indicators {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    margin: 2rem 0;
+}
+
+.security-indicator {
+    text-align: center;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+    flex: 1;
+}
+
+.package-item {
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.spinner {
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #D3B16D;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <!-- Step Indicator -->
+    <div class="step-indicator">
+        <div class="step completed">
+            <div class="step-number"><i class="fas fa-check"></i></div>
+            <span>Handlekurv</span>
+        </div>
+        <div class="step completed">
+            <div class="step-number"><i class="fas fa-check"></i></div>
+            <span>Fakturainformasjon</span>
+        </div>
+        <div class="step active">
+            <div class="step-number">3</div>
+            <span>Betaling</span>
+        </div>
+        <div class="step">
+            <div class="step-number">4</div>
+            <span>Bekreftelse</span>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Payment Form -->
+        <div class="col-lg-8">
+            <div class="payment-section p-4 position-relative">
+                <div class="payment-loader">
+                    <div class="spinner"></div>
+                    <p class="mt-3 text-center">Behandler betaling...</p>
+                </div>
+
+                <h3 class="mb-4" style="color: #3E4D50;">
+                    <i class="fas fa-credit-card me-2"></i>Betaling
+                </h3>
+
+                <!-- Security Indicators -->
+                <div class="security-indicators">
+                    <div class="security-indicator">
+                        <i class="fas fa-shield-alt fa-2x text-success mb-2"></i>
+                        <h6>SSL-sikret</h6>
+                        <small class="text-muted">256-bit kryptering</small>
+                    </div>
+                    <div class="security-indicator">
+                        <i class="fab fa-stripe fa-2x text-primary mb-2"></i>
+                        <h6>Stripe</h6>
+                        <small class="text-muted">Sikker betalingspartner</small>
+                    </div>
+                    <div class="security-indicator">
+                        <i class="fas fa-lock fa-2x text-warning mb-2"></i>
+                        <h6>PCI-kompatibel</h6>
+                        <small class="text-muted">Industristandard</small>
+                    </div>
+                </div>
+
+                <form id="payment-form">
+                    <div class="mb-4">
+                        <label for="card-element" class="form-label">
+                            <strong>Kortinformasjon</strong>
+                        </label>
+                        <div id="card-element">
+                            <!-- Stripe Elements will create form elements here -->
+                        </div>
+                        <div id="card-errors" role="alert"></div>
+                    </div>
+
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <p><strong>Faktureringsadresse:</strong></p>
+                            <address>
+                                {{ order.billing_name }}<br>
+                                {% if order.billing_organization %}{{ order.billing_organization }}<br>{% endif %}
+                                {% if order.billing_address %}{{ order.billing_address|linebreaks }}{% endif %}
+                                {% if order.billing_city %}{{ order.billing_city }}{% endif %}
+                                {% if order.billing_postal_code %}{{ order.billing_postal_code }}{% endif %}
+                            </address>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>E-post for kvittering:</strong></p>
+                            <p>{{ order.billing_email }}</p>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Viktig:</strong> Betalingen blir trukket umiddelbart, men du får tilgang til alle pakker med 
+                            {{ order.items.first.package.trial_period_days }} dagers prøveperiode.
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center">
+                        <a href="{% url 'core:checkout' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Tilbake
+                        </a>
+                        <button type="submit" id="submit-button" class="btn btn-pay-now">
+                            <span id="button-text">
+                                <i class="fas fa-credit-card me-2"></i>Betal nå - {{ order.final_amount|floatformat:0 }} kr
+                            </span>
+                            <span id="spinner" class="d-none">
+                                <i class="fas fa-spinner fa-spin me-2"></i>Behandler...
+                            </span>
+                        </button>
+                    </div>
+                </form>
+
+                <!-- Support Information -->
+                <div class="mt-4 p-3 bg-light rounded">
+                    <h6><i class="fas fa-headset me-2"></i>Trenger du hjelp?</h6>
+                    <p class="mb-1">
+                        <small>
+                            Hvis du opplever problemer med betalingen, kontakt vår kundeservice:
+                        </small>
+                    </p>
+                    <small>
+                        <i class="fas fa-envelope me-1"></i>support@juridiskporten.no<br>
+                        <i class="fas fa-phone me-1"></i>+47 123 45 678
+                    </small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Order Summary -->
+        <div class="col-lg-4">
+            <div class="order-summary p-4">
+                <h4 class="mb-4">
+                    <i class="fas fa-receipt me-2"></i>Bestillingssammendrag
+                </h4>
+
+                <div class="mb-3">
+                    <small class="text-light">Bestillingsnummer:</small>
+                    <h6>{{ order.order_number }}</h6>
+                </div>
+
+                <!-- Cart Items -->
+                {% for item in order.items.all %}
+                <div class="package-item">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h6 class="mb-1">{{ item.package.name }}</h6>
+                        <span class="fw-bold">{{ item.total_price|floatformat:0 }} kr</span>
+                    </div>
+                    <small class="text-light">{{ item.package.description|truncatewords:8 }}</small>
+                    <div class="mt-2">
+                        <small>
+                            <i class="fas fa-clock me-1"></i>{{ item.package.trial_period_days }} dagers prøveperiode
+                        </small>
+                    </div>
+                </div>
+                {% endfor %}
+
+                <hr class="my-3" style="border-color: rgba(255,255,255,0.3);">
+
+                <!-- Pricing Breakdown -->
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Subtotal:</span>
+                        <span>{{ order.total_amount|floatformat:0 }} kr</span>
+                    </div>
+                    
+                    {% if order.discount_amount > 0 %}
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Rabatt {% if order.coupon_code %}({{ order.coupon_code }}){% endif %}:</span>
+                        <span class="text-success">-{{ order.discount_amount|floatformat:0 }} kr</span>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>MVA (25%):</span>
+                        <span>{{ order.tax_amount|floatformat:0 }} kr</span>
+                    </div>
+                    
+                    <hr class="my-3" style="border-color: rgba(255,255,255,0.3);">
+                    
+                    <div class="d-flex justify-content-between mb-4">
+                        <strong style="font-size: 1.2rem;">Total:</strong>
+                        <strong style="font-size: 1.2rem;">{{ order.final_amount|floatformat:0 }} kr</strong>
+                    </div>
+                </div>
+
+                <!-- Payment Methods -->
+                <div class="text-center">
+                    <small class="text-light mb-2 d-block">Vi aksepterer:</small>
+                    <div class="d-flex justify-content-center gap-2">
+                        <i class="fab fa-cc-visa fa-2x text-light"></i>
+                        <i class="fab fa-cc-mastercard fa-2x text-light"></i>
+                        <i class="fab fa-cc-amex fa-2x text-light"></i>
+                        <i class="fas fa-university fa-2x text-light"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Guarantee -->
+            <div class="mt-4">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <i class="fas fa-medal fa-3x text-warning mb-3"></i>
+                        <h6>100% tilfredsheitsgaranti</h6>
+                        <p class="small text-muted">
+                            Ikke fornøyd? Få full refundering innen 14 dager.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const stripe = Stripe('{{ stripe_publishable_key }}');
+const elements = stripe.elements();
+
+// Create card element
+const cardElement = elements.create('card', {
+    style: {
+        base: {
+            fontSize: '16px',
+            color: '#424770',
+            '::placeholder': {
+                color: '#aab7c4',
+            },
+        },
+        invalid: {
+            color: '#9e2146',
+        },
+    },
+});
+
+cardElement.mount('#card-element');
+
+// Handle real-time validation errors from the card element
+cardElement.on('change', function(event) {
+    const displayError = document.getElementById('card-errors');
+    if (event.error) {
+        displayError.textContent = event.error.message;
+    } else {
+        displayError.textContent = '';
+    }
+});
+
+// Handle form submission
+const form = document.getElementById('payment-form');
+form.addEventListener('submit', async function(event) {
+    event.preventDefault();
+
+    const submitButton = document.getElementById('submit-button');
+    const buttonText = document.getElementById('button-text');
+    const spinner = document.getElementById('spinner');
+    const loader = document.querySelector('.payment-loader');
+
+    // Disable button and show loading state
+    submitButton.disabled = true;
+    buttonText.classList.add('d-none');
+    spinner.classList.remove('d-none');
+    loader.style.display = 'block';
+
+    const {error, paymentIntent} = await stripe.confirmCardPayment('{{ client_secret }}', {
+        payment_method: {
+            card: cardElement,
+            billing_details: {
+                name: '{{ order.billing_name }}',
+                email: '{{ order.billing_email }}',
+                {% if order.billing_address %}
+                address: {
+                    line1: '{{ order.billing_address|linebreaksbr|striptags }}',
+                    city: '{{ order.billing_city }}',
+                    postal_code: '{{ order.billing_postal_code }}',
+                    country: '{{ order.billing_country }}',
+                },
+                {% endif %}
+            }
+        }
+    });
+
+    if (error) {
+        // Show error to customer
+        const errorElement = document.getElementById('card-errors');
+        errorElement.textContent = error.message;
+
+        // Re-enable button
+        submitButton.disabled = false;
+        buttonText.classList.remove('d-none');
+        spinner.classList.add('d-none');
+        loader.style.display = 'none';
+    } else {
+        // Payment succeeded
+        if (paymentIntent.status === 'succeeded') {
+            // Redirect to success page
+            window.location.href = '{% url "core:payment_success" %}';
+        }
+    }
+});
+
+// Prevent page reload/back during payment
+let paymentInProgress = false;
+
+form.addEventListener('submit', function() {
+    paymentInProgress = true;
+});
+
+window.addEventListener('beforeunload', function(e) {
+    if (paymentInProgress) {
+        e.preventDefault();
+        e.returnValue = 'Betaling pågår. Er du sikker på at du vil forlate siden?';
+    }
+});
+
+// Auto-focus card element
+document.addEventListener('DOMContentLoaded', function() {
+    cardElement.focus();
+});
+</script>
+{% endblock %}

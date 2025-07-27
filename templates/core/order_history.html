@@ -1,0 +1,450 @@
+{% extends "core/base.html" %}
+{% load static %}
+
+{% block title %}Mine bestillinger - JuridiskPorten{% endblock %}
+
+{% block extra_head %}
+<style>
+.orders-header {
+    background: linear-gradient(135deg, #3E4D50, #A7B9BC);
+    color: white;
+    border-radius: 16px;
+    margin-bottom: 2rem;
+}
+
+.order-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+    border-left: 4px solid #dee2e6;
+}
+
+.order-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+}
+
+.order-card.completed {
+    border-left-color: #28a745;
+}
+
+.order-card.pending {
+    border-left-color: #ffc107;
+}
+
+.order-card.failed {
+    border-left-color: #dc3545;
+}
+
+.order-status {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.status-completed {
+    background: rgba(40, 167, 69, 0.2);
+    color: #28a745;
+}
+
+.status-pending {
+    background: rgba(255, 193, 7, 0.2);
+    color: #856404;
+}
+
+.status-failed {
+    background: rgba(220, 53, 69, 0.2);
+    color: #dc3545;
+}
+
+.package-item {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 15px;
+    margin: 10px 0;
+    border-left: 3px solid #D3B16D;
+}
+
+.filter-tabs {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    padding: 20px;
+    margin-bottom: 2rem;
+}
+
+.filter-btn {
+    background: transparent;
+    border: 2px solid #e9ecef;
+    color: #6c757d;
+    padding: 8px 20px;
+    border-radius: 25px;
+    margin: 5px;
+    transition: all 0.3s ease;
+}
+
+.filter-btn.active {
+    background: linear-gradient(135deg, #D3B16D, #b8965a);
+    border-color: #D3B16D;
+    color: white;
+}
+
+.filter-btn:hover {
+    border-color: #D3B16D;
+    color: #D3B16D;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: #6c757d;
+}
+
+.stats-card {
+    background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    margin-bottom: 1rem;
+}
+
+.pagination-wrapper {
+    display: flex;
+    justify-content: center;
+    margin-top: 2rem;
+}
+
+.btn-view-order {
+    background: linear-gradient(135deg, #3E4D50, #A7B9BC);
+    border: none;
+    color: white;
+    border-radius: 20px;
+    padding: 8px 20px;
+    transition: all 0.3s ease;
+}
+
+.btn-view-order:hover {
+    background: linear-gradient(135deg, #2d3a3c, #8fa5a8);
+    transform: translateY(-2px);
+}
+
+@media (max-width: 768px) {
+    .order-card .row > div {
+        margin-bottom: 1rem;
+    }
+    
+    .filter-btn {
+        display: block;
+        width: 100%;
+        margin: 5px 0;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Header Section -->
+    <div class="orders-header p-4">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="mb-2">
+                    <i class="fas fa-shopping-bag me-3"></i>Mine bestillinger
+                </h1>
+                <p class="mb-0 opacity-75">
+                    Oversikt over alle dine kjøp og abonnementer
+                </p>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <div class="stats-card" style="background: rgba(255,255,255,0.2);">
+                    <h4 class="mb-1">{{ total_orders }}</h4>
+                    <small>Totale bestillinger</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Tabs -->
+    <div class="filter-tabs">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h6 class="mb-3">Filtrer bestillinger:</h6>
+                <div class="filter-buttons">
+                    <button class="filter-btn {% if not status_filter %}active{% endif %}" 
+                            onclick="filterOrders('all')">
+                        <i class="fas fa-list me-2"></i>Alle
+                    </button>
+                    <button class="filter-btn {% if status_filter == 'completed' %}active{% endif %}" 
+                            onclick="filterOrders('completed')">
+                        <i class="fas fa-check-circle me-2"></i>Fullført
+                    </button>
+                    <button class="filter-btn {% if status_filter == 'pending' %}active{% endif %}" 
+                            onclick="filterOrders('pending')">
+                        <i class="fas fa-clock me-2"></i>Venter
+                    </button>
+                    <button class="filter-btn {% if status_filter == 'failed' %}active{% endif %}" 
+                            onclick="filterOrders('failed')">
+                        <i class="fas fa-times-circle me-2"></i>Feilet
+                    </button>
+                </div>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <div class="d-flex justify-content-md-end">
+                    <select class="form-select" style="width: auto;" onchange="sortOrders(this.value)">
+                        <option value="-created_at">Nyeste først</option>
+                        <option value="created_at">Eldste først</option>
+                        <option value="-final_amount">Høyeste beløp</option>
+                        <option value="final_amount">Laveste beløp</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Orders List -->
+    {% if orders %}
+        <div class="orders-list">
+            {% for order in orders %}
+            <div class="order-card p-4 mb-4 {{ order.status }}">
+                <div class="row align-items-center">
+                    <!-- Order Info -->
+                    <div class="col-md-3">
+                        <h6 class="mb-1">
+                            <i class="fas fa-receipt me-2"></i>{{ order.order_number }}
+                        </h6>
+                        <p class="text-muted small mb-1">
+                            <i class="fas fa-calendar me-1"></i>{{ order.created_at|date:"d.m.Y" }}
+                        </p>
+                        <p class="text-muted small mb-0">
+                            <i class="fas fa-clock me-1"></i>{{ order.created_at|time:"H:i" }}
+                        </p>
+                    </div>
+
+                    <!-- Status -->
+                    <div class="col-md-2">
+                        <span class="order-status status-{{ order.status }}">
+                            {% if order.status == 'completed' %}
+                                <i class="fas fa-check me-1"></i>Fullført
+                            {% elif order.status == 'pending' %}
+                                <i class="fas fa-clock me-1"></i>Venter
+                            {% elif order.status == 'failed' %}
+                                <i class="fas fa-times me-1"></i>Feilet
+                            {% else %}
+                                <i class="fas fa-question me-1"></i>{{ order.get_status_display }}
+                            {% endif %}
+                        </span>
+                    </div>
+
+                    <!-- Amount -->
+                    <div class="col-md-2 text-center">
+                        <h5 class="mb-0" style="color: #3E4D50;">
+                            {{ order.final_amount|floatformat:0 }} kr
+                        </h5>
+                        {% if order.discount_applied > 0 %}
+                        <small class="text-success">
+                            <i class="fas fa-tag me-1"></i>-{{ order.discount_applied|floatformat:0 }} kr rabatt
+                        </small>
+                        {% endif %}
+                    </div>
+
+                    <!-- Package Count -->
+                    <div class="col-md-3">
+                        <p class="mb-1">
+                            <i class="fas fa-box me-2"></i>
+                            {{ order.items.count }} pakke{{ order.items.count|pluralize:"r" }}
+                        </p>
+                        {% if order.items.count <= 2 %}
+                            {% for item in order.items.all %}
+                            <small class="text-muted d-block">{{ item.package.name }}</small>
+                            {% endfor %}
+                        {% else %}
+                            <small class="text-muted">
+                                {{ order.items.first.package.name }} og {{ order.items.count|add:"-1" }} til
+                            </small>
+                        {% endif %}
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="col-md-2 text-end">
+                        <a href="{% url 'core:order_detail' order.id %}" 
+                           class="btn btn-view-order btn-sm">
+                            <i class="fas fa-eye me-1"></i>Vis detaljer
+                        </a>
+                        {% if order.status == 'failed' %}
+                        <br>
+                        <button class="btn btn-outline-primary btn-sm mt-2" 
+                                onclick="retryPayment('{{ order.id }}')">
+                            <i class="fas fa-redo me-1"></i>Prøv igjen
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Expandable Package Details -->
+                <div class="collapse mt-3" id="order-details-{{ order.id }}">
+                    <div class="border-top pt-3">
+                        <h6 class="mb-3">Kjøpte pakker:</h6>
+                        {% for item in order.items.all %}
+                        <div class="package-item">
+                            <div class="row align-items-center">
+                                <div class="col-md-8">
+                                    <h6 class="mb-1">{{ item.package.name }}</h6>
+                                    <p class="text-muted small mb-0">
+                                        {{ item.package.description|truncatechars:100 }}
+                                    </p>
+                                </div>
+                                <div class="col-md-2 text-center">
+                                    <span class="badge bg-secondary">
+                                        {{ item.quantity }} stk
+                                    </span>
+                                </div>
+                                <div class="col-md-2 text-end">
+                                    <strong>{{ item.total_price|floatformat:0 }} kr</strong>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Toggle Button -->
+                <div class="text-center mt-3">
+                    <button class="btn btn-link btn-sm" 
+                            data-bs-toggle="collapse" 
+                            data-bs-target="#order-details-{{ order.id }}"
+                            aria-expanded="false">
+                        <i class="fas fa-chevron-down me-1"></i>
+                        <span class="toggle-text">Vis pakker</span>
+                    </button>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Pagination -->
+        {% if is_paginated %}
+        <div class="pagination-wrapper">
+            <nav>
+                <ul class="pagination">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page=1{% if status_filter %}&status={{ status_filter }}{% endif %}">
+                            <i class="fas fa-angle-double-left"></i>
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}">
+                            <i class="fas fa-angle-left"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+
+                    {% for num in page_obj.paginator.page_range %}
+                        {% if page_obj.number == num %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ num }}</span>
+                        </li>
+                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ num }}{% if status_filter %}&status={{ status_filter }}{% endif %}">
+                                {{ num }}
+                            </a>
+                        </li>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}">
+                            <i class="fas fa-angle-right"></i>
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if status_filter %}&status={{ status_filter }}{% endif %}">
+                            <i class="fas fa-angle-double-right"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+
+    {% else %}
+        <!-- Empty State -->
+        <div class="empty-state">
+            <i class="fas fa-shopping-cart fa-4x mb-4" style="color: #dee2e6;"></i>
+            <h4 class="mb-3">Ingen bestillinger ennå</h4>
+            <p class="mb-4">
+                Du har ikke gjort noen kjøp ennå. Utforsk våre fagpakker og finn det som passer for deg.
+            </p>
+            <a href="{% url 'core:package_showcase' %}" class="btn btn-primary btn-lg">
+                <i class="fas fa-shopping-bag me-2"></i>Utforsk fagpakker
+            </a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Filter orders by status
+function filterOrders(status) {
+    const url = new URL(window.location);
+    if (status === 'all') {
+        url.searchParams.delete('status');
+    } else {
+        url.searchParams.set('status', status);
+    }
+    url.searchParams.delete('page'); // Reset to first page
+    window.location.href = url.toString();
+}
+
+// Sort orders
+function sortOrders(sortBy) {
+    const url = new URL(window.location);
+    url.searchParams.set('sort', sortBy);
+    url.searchParams.delete('page'); // Reset to first page
+    window.location.href = url.toString();
+}
+
+// Retry failed payment
+function retryPayment(orderId) {
+    if (confirm('Vil du prøve betalingen på nytt?')) {
+        // Redirect to payment page for this order
+        window.location.href = `/bestillinger/${orderId}/betal-panytt/`;
+    }
+}
+
+// Toggle collapse button text
+document.addEventListener('DOMContentLoaded', function() {
+    const collapseButtons = document.querySelectorAll('[data-bs-toggle="collapse"]');
+    
+    collapseButtons.forEach(button => {
+        const target = document.querySelector(button.getAttribute('data-bs-target'));
+        const toggleText = button.querySelector('.toggle-text');
+        const icon = button.querySelector('i');
+        
+        target.addEventListener('show.bs.collapse', function() {
+            toggleText.textContent = 'Skjul pakker';
+            icon.className = 'fas fa-chevron-up me-1';
+        });
+        
+        target.addEventListener('hide.bs.collapse', function() {
+            toggleText.textContent = 'Vis pakker';
+            icon.className = 'fas fa-chevron-down me-1';
+        });
+    });
+});
+
+// Auto-refresh for pending orders
+{% if has_pending_orders %}
+setTimeout(function() {
+    location.reload();
+}, 30000); // Refresh every 30 seconds if there are pending orders
+{% endif %}
+</script>
+{% endblock %}

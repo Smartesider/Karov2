@@ -1,0 +1,512 @@
+OpenLiteSpeed ProxyPass via vHost Context (CyberPanel)
+Du må legge inn en context i vHost-konfigurasjonen for at domenet (f.eks. skyforskning.no) skal kunne sende ekstern trafikk til applikasjonen som kjører på 127.0.0.1:8030.
+
+🔧 Det gjøres slik:
+A. Logg inn i CyberPanel
+→ Gå til Websites
+→ Velg ditt domene (skyforskning.no)
+→ Klikk på Manage
+→ Bla ned til "Rewrite Rules" og "vHost Conf"
+
+B. Klikk på vHost Conf
+C. Scroll til delen som begynner med:
+xml
+Kopier
+Rediger
+docRoot $VH_ROOT/html
+D. Legg til følgende context nederst i filen (før </virtualHost> hvis den finnes):
+xml
+Kopier
+Rediger
+context / {
+  type                    proxy
+  handler                 http://127.0.0.1:8030
+  addDefaultCharset       off
+  rewrite                 0
+}
+Dette betyr:
+
+context / → gjelder root path for domenet
+
+proxy → sender alt til intern app
+
+handler → intern IP/port for appen
+
+rewrite=0 → lar trafikken flyte uendret
+
+E. Trykk Save → Deretter:
+→ Gå tilbake til “Websites”
+→ Klikk “Manage” → Klikk “Restart LiteSpeed”
+
+Ikke restart hele serveren.
+
+🧪 Test at forwarding fungerer:
+bash
+Kopier
+Rediger
+curl -I http://127.0.0.1:8030
+curl -I http://skyforskning.no
+✅ Hva AI bør gjøre:
+Validere at 127.0.0.1:{port} svarer
+
+Verifisere at vHost finnes for domenet
+
+Skrive context-blokken til vhconf.conf (eller bruke API hvis GUI-tilgang er aktiv)
+
+Reload Litespeed via CLI:
+
+bash
+Kopier
+Rediger
+/usr/local/lsws/bin/lswsctrl reload
+# JuridiskPorten (Karov2) - Development Phase Plan
+# MVP Development Plan for Legal Services Platform
+# Created: July 27, 2025
+
+## PROJECT OVERVIEW
+===================
+JuridiskPorten is a digital legal platform providing package-based access to legal services.
+The platform serves lawyers and their clients with skreddersydd content including articles,
+forms, AI assistance, and contact capabilities.
+
+**Target Architecture:**
+- Backend: Django with MariaDB
+- Frontend: Vue.js/React with TailwindCSS  
+- AI: OpenAI integration with package-specific knowledge
+- Payment: Stripe integration
+- Design: Based on bjerkewangberg.no styling (#3E4D50, #A7B9BC, #D3B16D)
+
+**Server Configuration:**
+- Development URL: https://skycode.no/karoline
+- Development Port: 8095
+- Database: MariaDB (skyc_karo/skyc_karo)
+
+## PHASE 1: FOUNDATION & CORE ARCHITECTURE
+==========================================
+**Timeline:** Weeks 1-2
+**Priority:** Critical
+
+### Objectives:
+- Establish secure development environment
+- Create robust Django project structure
+- Implement user authentication system
+- Design comprehensive database schema
+- Build responsive UI foundation
+
+### Technical Deliverables:
+1. **Django Project Setup**
+   - Project initialization with security best practices
+   - Environment-based configuration (dev/staging/prod)
+   - MariaDB connection and optimization
+   - Static files and media handling
+   - Logging and error tracking
+
+2. **Authentication & Authorization**
+   - Custom User model extending AbstractUser
+   - Role-based permissions (Client, Lawyer, Admin)
+   - Package-based access control middleware
+   - Password security and validation
+   - Session management
+
+3. **Database Schema Design**
+   ```
+   Models to implement:
+   - CustomUser (extends AbstractUser)
+   - LegalPackage (4 main packages)
+   - PackageSubscription (user access tracking)
+   - Content (articles, forms, Q&A)
+   - ContentCategory
+   - UserActivity (audit trail)
+   ```
+
+4. **Security Implementation**
+   - CSRF protection
+   - XSS prevention
+   - SQL injection safeguards
+   - Secure headers configuration
+   - Input validation framework
+
+5. **UI Foundation**
+   - TailwindCSS integration
+   - Base templates with design system
+   - Responsive grid system
+   - Component library setup
+   - Accessibility compliance (WCAG 2.1)
+
+### Key Security Tasks:
+- Django security middleware configuration
+- Database connection encryption
+- Environment variable management
+- HTTPS enforcement
+- Rate limiting setup
+
+### Success Criteria:
+- [ ] Secure Django project running on port 8095
+- [ ] User registration/login functionality
+- [ ] Basic admin interface operational
+- [ ] Database schema implemented and tested
+- [ ] Responsive layout matching design requirements
+- [ ] Security audit passing
+
+---
+
+## PHASE 2: PACKAGE MANAGEMENT & CONTENT SYSTEM
+===============================================
+**Timeline:** Weeks 3-4
+**Priority:** High
+
+### Objectives:
+- Implement sophisticated package system
+- Build comprehensive content management
+- Create intuitive user dashboard
+- Establish granular access control
+
+### Deliverables:
+
+1. **Package System**
+   - Package model with metadata (title, description, pricing)
+   - Package categories and subcategories
+   - Access level definitions per content type
+   - Package bundling capabilities
+   - Trial period management
+
+2. **Content Management System**
+   - Rich text editor for articles (CKEditor/TinyMCE)
+   - File upload system with validation
+   - Version control for documents
+   - Content scheduling and publishing
+   - SEO optimization features
+
+3. **Legal Package Implementations:**
+   - **Saksbehandlerstøtte – bevillingsforvaltning**
+   - **Saksbehandlerstøtte – arbeidsrett & HR**
+   - **Saksbehandlerstøtte – generell forvaltningsrett**
+   - **Saksbehandlerstøtte – helse og pasient/brukerrettigheter**
+
+4. **User Dashboard**
+   - Package overview with visual status indicators
+   - Content access matrix
+   - Recent activity feed
+   - Bookmark/favorites system
+   - Progress tracking
+
+5. **Access Control System**
+   - Package-based permission decorators
+   - Content visibility rules
+   - Time-based access (subscription periods)
+   - IP-based restrictions (if needed)
+   - Audit logging for all access
+
+### Content Types to Implement:
+- **Articles:** Legal guides and updates
+- **Forms/Templates:** PDF/DOCX with fillable fields
+- **Q&A Modules:** Expandable FAQ sections
+- **Live Events:** Calendar integration
+- **Resource Library:** Downloadable materials
+
+### Success Criteria:
+- [ ] All 4 legal packages fully defined and accessible
+- [ ] Content creation workflow for lawyers operational
+- [ ] User dashboard showing appropriate package access
+- [ ] File upload/download system working securely
+- [ ] Search functionality within packages
+
+---
+
+## PHASE 3: E-COMMERCE & PAYMENT INTEGRATION
+============================================
+**Timeline:** Weeks 5-6
+**Priority:** High
+
+### Objectives:
+- Implement secure payment processing
+- Create seamless package purchasing flow
+- Build order management system
+- Establish automated access granting
+
+### Deliverables:
+
+1. **Package Showcase**
+   - Visual package presentation matching design
+   - Detailed package information popups
+   - Pricing display with tax calculations
+   - Package comparison features
+   - Testimonials and social proof
+
+2. **Shopping Cart System**
+   - Add/remove packages functionality
+   - Package bundling discounts
+   - Coupon/promotional code system
+   - Cart persistence across sessions
+   - Mobile-optimized checkout
+
+3. **Stripe Payment Integration**
+   - Secure payment form integration
+   - Multiple payment methods (cards, bank transfer)
+   - Subscription billing for recurring packages
+   - Invoice generation and delivery
+   - Refund and cancellation handling
+
+4. **Order Processing**
+   - Order confirmation workflow
+   - Email notifications (confirmation, access granted)
+   - Automatic package activation
+   - Order history and tracking
+   - Customer service integration
+
+5. **Financial Management**
+   - Revenue tracking and reporting
+   - Tax calculation and compliance
+   - Payment reconciliation
+   - Subscription renewal automation
+   - Dunning management for failed payments
+
+### Security Considerations:
+- PCI DSS compliance for payment processing
+- Encrypted storage of payment metadata
+- Webhook signature verification
+- Fraud detection integration
+- Secure invoice delivery
+
+### Success Criteria:
+- [ ] Complete package purchase flow operational
+- [ ] Stripe integration tested with real transactions
+- [ ] Automatic access granting upon payment
+- [ ] Email notification system working
+- [ ] Order management dashboard for admins
+
+---
+
+## PHASE 4: AI INTEGRATION & ADVANCED FEATURES
+==============================================
+**Timeline:** Weeks 7-8
+**Priority:** Medium-High
+
+### Objectives:
+- Deploy package-specific AI assistants
+- Implement advanced content features
+- Create interactive Q&A systems
+- Build intelligent routing systems
+
+### Deliverables:
+
+1. **AI Assistant Implementation**
+   - OpenAI API integration with custom prompts
+   - Package-specific knowledge bases
+   - Context-aware conversations
+   - Citation and source referencing
+   - Usage tracking and analytics
+
+2. **AI Knowledge Base per Package:**
+   - **Bevillingsforvaltning AI:** Licensing, permits, regulatory compliance
+   - **Arbeidsrett AI:** Employment law, HR policies, workplace disputes
+   - **Forvaltningsrett AI:** Administrative law, public sector guidance
+   - **Helse AI:** Healthcare law, patient rights, medical compliance
+
+3. **Interactive Features**
+   - Real-time chat interface
+   - Document analysis capabilities
+   - Form auto-completion assistance
+   - Legal precedent lookup
+   - Risk assessment tools
+
+4. **Advanced Content Systems**
+   - Q&A with smart search
+   - Live event calendar integration
+   - Document generation from templates
+   - Collaborative note-taking
+   - Content recommendation engine
+
+5. **Communication Hub**
+   - Smart contact form routing based on package/query type
+   - Lawyer availability calendar
+   - Secure messaging system
+   - Video consultation booking
+   - Case management integration
+
+### AI Features by Package:
+- **Legal document review and suggestions**
+- **Regulation update notifications**
+- **Compliance checklists generation**
+- **Risk assessment questionnaires**
+- **Template customization assistance**
+
+### Success Criteria:
+- [ ] AI assistant responding accurately for each package
+- [ ] Document generation working smoothly
+- [ ] Contact routing directing to appropriate lawyers
+- [ ] Calendar integration for live events functional
+- [ ] User satisfaction with AI responses >80%
+
+---
+
+## PHASE 5: POLISH & PRODUCTION READINESS
+=========================================
+**Timeline:** Weeks 9-10
+**Priority:** Critical
+
+### Objectives:
+- Complete security hardening
+- Optimize performance for production load
+- Deploy to production environment
+- Conduct comprehensive testing
+
+### Deliverables:
+
+1. **Security Hardening**
+   - Penetration testing and vulnerability assessment
+   - Security headers optimization
+   - Data encryption at rest and in transit
+   - Backup and disaster recovery procedures
+   - GDPR compliance implementation
+
+2. **Performance Optimization**
+   - Database query optimization and indexing
+   - Redis caching implementation
+   - CDN setup for static assets
+   - Image optimization and lazy loading
+   - API response time optimization
+
+3. **Production Deployment**
+   - Server configuration and hardening
+   - SSL/TLS certificate setup
+   - Domain configuration and DNS
+   - Load balancing setup (if needed)
+   - Monitoring and alerting systems
+
+4. **Quality Assurance**
+   - Comprehensive test suite (unit, integration, e2e)
+   - Cross-browser compatibility testing
+   - Mobile responsiveness verification
+   - Load testing and stress testing
+   - User acceptance testing
+
+5. **Documentation & Training**
+   - User manual for lawyers and clients
+   - API documentation
+   - Deployment and maintenance guides
+   - Video tutorials for key features
+   - Customer support knowledge base
+
+### Production Checklist:
+- [ ] SSL certificate installed and configured
+- [ ] Database backups automated
+- [ ] Error logging and monitoring active
+- [ ] Performance metrics tracking
+- [ ] Security scanning passed
+- [ ] Load testing completed successfully
+- [ ] User training materials delivered
+
+---
+
+## RISK MITIGATION STRATEGIES
+=============================
+
+### Technical Risks:
+- **AI API limitations:** Implement fallback responses and rate limiting
+- **Payment processing issues:** Multiple payment gateway options
+- **Database performance:** Proactive monitoring and optimization
+- **Security vulnerabilities:** Regular security audits and updates
+
+### Business Risks:
+- **User adoption:** Comprehensive onboarding and training
+- **Content quality:** Editorial review process
+- **Legal compliance:** Regular legal review of content and processes
+- **Scalability:** Cloud-ready architecture from day one
+
+### Operational Risks:
+- **Data loss:** Automated backups and disaster recovery
+- **Service downtime:** Redundancy and monitoring
+- **Staff availability:** Documentation and knowledge sharing
+- **Budget overrun:** Regular milestone reviews and adjustments
+
+---
+
+## SUCCESS METRICS & KPIs
+=========================
+
+### Technical Metrics:
+- Page load time < 2 seconds
+- 99.9% uptime SLA
+- Zero critical security vulnerabilities
+- API response time < 500ms
+- Mobile page speed score > 90
+
+### Business Metrics:
+- User registration conversion rate > 15%
+- Package purchase conversion rate > 8%
+- Customer satisfaction score > 4.5/5
+- Monthly active users growth > 10%
+- Content engagement rate > 60%
+
+### Quality Metrics:
+- Bug report rate < 1% of user sessions
+- Customer support ticket resolution < 24 hours
+- AI response accuracy > 85%
+- Content freshness (updated within 30 days) > 80%
+- Security audit compliance 100%
+
+---
+
+## MAINTENANCE & FUTURE PHASES
+==============================
+
+### Post-MVP Enhancements:
+- Mobile application development
+- Advanced analytics and reporting
+- Multi-language support
+- Integration with external legal databases
+- White-label solutions for other law firms
+
+### Ongoing Maintenance:
+- Monthly security updates
+- Quarterly content review and updates
+- Bi-annual penetration testing
+- Annual technology stack review
+- Continuous user feedback integration
+
+---
+
+## RESOURCE REQUIREMENTS
+========================
+
+### Development Team:
+- 1 Senior Full-stack Developer (Django/Vue.js)
+- 1 Frontend Developer (Vue.js/TailwindCSS)
+- 1 DevOps Engineer (part-time)
+- 1 AI Integration Specialist (part-time)
+- 1 Security Consultant (part-time)
+
+### Infrastructure:
+- Development server (existing)
+- Production server with SSL
+- MariaDB database with backup
+- CDN for static assets
+- Email service provider
+- Payment processing account
+
+### Third-party Services:
+- Stripe for payments
+- OpenAI API for AI features
+- Email service (SendGrid/Mailgun)
+- Monitoring service (optional)
+- Backup service
+
+---
+
+## CONCLUSION
+=============
+
+This phase plan provides a structured approach to building JuridiskPorten as a comprehensive legal services platform. Each phase builds upon the previous one, ensuring a solid foundation while delivering incremental value to users.
+
+The MVP will enable lawyers to serve clients through a modern, secure digital platform with AI-enhanced capabilities, setting the foundation for future growth and expansion.
+
+**Project Timeline:** 10 weeks to full MVP
+**Expected Launch:** October 2025
+**First Package Go-Live:** Phase 2 completion (Week 4)
+**Full Commercial Launch:** Phase 5 completion (Week 10)
+
+---
+**Document Version:** 1.0
+**Last Updated:** July 27, 2025
+**Next Review:** Phase 1 completion

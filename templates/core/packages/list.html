@@ -1,0 +1,183 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Legal Packages - JuridiskPorten{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50">
+    <!-- Header Section -->
+    <div class="bg-white shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div class="text-center">
+                <h1 class="text-3xl font-bold text-gray-900">Legal Service Packages</h1>
+                <p class="mt-4 text-lg text-gray-600">
+                    Professional legal resources tailored for your specific needs
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Section -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="bg-white rounded-lg shadow p-6 text-center">
+                <div class="text-2xl font-bold text-blue-600">{{ total_packages }}</div>
+                <div class="text-gray-600">Available Packages</div>
+            </div>
+            <div class="bg-white rounded-lg shadow p-6 text-center">
+                <div class="text-2xl font-bold text-green-600">
+                    {% if user_subscriptions %}{{ user_subscriptions|length }}{% else %}0{% endif %}
+                </div>
+                <div class="text-gray-600">Your Active Packages</div>
+            </div>
+            <div class="bg-white rounded-lg shadow p-6 text-center">
+                <div class="text-2xl font-bold text-purple-600">
+                    {% for subscription in user_subscriptions %}
+                        {{ subscription.package.content_count|add:0 }}
+                    {% empty %}0{% endfor %}
+                </div>
+                <div class="text-gray-600">Available Content</div>
+            </div>
+        </div>
+
+        <!-- Featured Packages -->
+        {% if featured_packages %}
+        <div class="mb-12">
+            <h2 class="text-2xl font-bold text-gray-900 mb-6">Featured Packages</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {% for package in featured_packages %}
+                <div class="bg-gradient-to-br from-blue-600 to-purple-700 rounded-lg shadow-lg text-white p-6 package-card">
+                    <div class="flex items-center mb-4">
+                        {% if package.icon %}
+                        <i class="{{ package.icon }} text-2xl mr-3"></i>
+                        {% endif %}
+                        <h3 class="text-lg font-semibold">{{ package.name }}</h3>
+                    </div>
+                    <p class="text-blue-100 mb-4">{{ package.description|truncatewords:15 }}</p>
+                    <div class="flex justify-between items-center">
+                        <span class="text-xl font-bold">${{ package.price }}</span>
+                        <a href="{% url 'core:package_detail' package.slug %}" 
+                           class="bg-white text-blue-600 px-4 py-2 rounded-md font-medium hover:bg-blue-50 transition-colors">
+                            View Details
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- All Packages -->
+        <div>
+            <h2 class="text-2xl font-bold text-gray-900 mb-6">All Packages</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {% for package in packages %}
+                <div class="bg-white rounded-lg shadow-lg overflow-hidden package-card">
+                    {% if package.banner_image %}
+                    <img src="{{ package.banner_image.url }}" alt="{{ package.name }}" 
+                         class="w-full h-48 object-cover">
+                    {% else %}
+                    <div class="w-full h-48 bg-gradient-to-br from-gray-400 to-gray-600 flex items-center justify-center">
+                        {% if package.icon %}
+                        <i class="{{ package.icon }} text-4xl text-white"></i>
+                        {% else %}
+                        <i class="fas fa-briefcase text-4xl text-white"></i>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                    
+                    <div class="p-6">
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="text-lg font-semibold text-gray-900">{{ package.name }}</h3>
+                            {% if user.is_authenticated and package.user_has_access %}
+                            <span class="bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
+                                Active
+                            </span>
+                            {% endif %}
+                        </div>
+                        
+                        <p class="text-gray-600 mb-4 line-clamp-3">{{ package.description }}</p>
+                        
+                        <div class="flex items-center justify-between text-sm text-gray-500 mb-4">
+                            <span><i class="fas fa-file-alt mr-1"></i>{{ package.content_count }} articles</span>
+                            <span><i class="fas fa-users mr-1"></i>{{ package.subscriber_count }} subscribers</span>
+                        </div>
+                        
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <span class="text-2xl font-bold text-gray-900">${{ package.price }}</span>
+                                {% if package.monthly_price %}
+                                <span class="text-sm text-gray-500">/month</span>
+                                {% endif %}
+                            </div>
+                            
+                            {% if user.is_authenticated and package.user_has_access %}
+                            <a href="{% url 'core:content_list' package.slug %}" 
+                               class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors">
+                                Browse Content
+                            </a>
+                            {% else %}
+                            <a href="{% url 'core:package_detail' package.slug %}" 
+                               class="btn-accent">
+                                View Details
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Pagination -->
+        {% if is_paginated %}
+        <div class="mt-12 flex justify-center">
+            <div class="flex space-x-2">
+                {% if page_obj.has_previous %}
+                <a href="?page=1" class="px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
+                    First
+                </a>
+                <a href="?page={{ page_obj.previous_page_number }}" 
+                   class="px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
+                    Previous
+                </a>
+                {% endif %}
+                
+                <span class="px-3 py-2 bg-blue-600 text-white rounded-md">
+                    Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                </span>
+                
+                {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}" 
+                   class="px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
+                    Next
+                </a>
+                <a href="?page={{ page_obj.paginator.num_pages }}" 
+                   class="px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
+                    Last
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+.package-card {
+    transition: transform 0.2s, box-shadow 0.3s;
+}
+
+.package-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+</style>
+{% endblock %}
