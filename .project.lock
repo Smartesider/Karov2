@@ -1,0 +1,8 @@
+project: skycode.no
+app_name: karo
+port: 8095
+entry: wsgi/gunicorn
+enforce_port: true
+ai_safe: true
+lock_type: static
+locked_by: setup_skycode.sh

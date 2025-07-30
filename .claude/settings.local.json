@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(sudo ufw:*)",
+      "Bash(sudo nginx:*)",
+      "Bash(find:*)",
+      "Bash(systemctl status:*)",
+      "Bash(php:*)",
+      "Bash(sudo systemctl reload:*)",
+      "Bash(rm:*)",
+      "Bash(curl:*)",
+      "Bash(ls:*)",
+      "Bash(postconf:*)",
+      "Bash(cat:*)",
+      "Bash(sudo useradd:*)",
+      "Bash(sudo mkdir:*)",
+      "Bash(sudo chown:*)",
+      "Bash(sudo netstat:*)",
+      "Bash(hostname:*)",
+      "Bash(doveadm pw:*)",
+      "Bash(sudo postmap:*)",
+      "Bash(sudo systemctl:*)",
+      "Bash(sudo tail:*)",
+      "Bash(sudo apt install:*)"
+    ],
+    "deny": []
+  }
+}

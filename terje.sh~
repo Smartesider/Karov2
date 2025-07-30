@@ -1,0 +1,110 @@
+#!/bin/bash
+set -euo pipefail
+
+TXT_LOG="/var/log/skyserver_audit.txt"
+JSON_LOG="/var/log/skyserver_audit.json"
+TMP_JSON="/tmp/audit_tmp.json"
+
+mkdir -p "$(dirname "$TXT_LOG")"
+
+echo "📋 Starter SkyServer sikkerhets- og endringsanalyse..." | tee "$TXT_LOG"
+echo '{' > "$JSON_LOG"
+
+# ─── Del 1: PHP-konfigurasjon ────────────────────────────────────────────────
+echo -e "\n▶️ PHP-config-endringer:" | tee -a "$TXT_LOG"
+echo '  "php_ini_files": [' >> "$JSON_LOG"
+first=true
+while IFS= read -r file; do
+    ls -lah "$file" >> "$TXT_LOG"
+    sha256sum "$file" >> "$TXT_LOG"
+    if [ "$first" = true ]; then
+        echo "    \"${file}\"" >> "$JSON_LOG"
+        first=false
+    else
+        echo "    ,\"${file}\"" >> "$JSON_LOG"
+    fi
+done < <(find /etc/php/ -name "php.ini")
+echo "  ]," >> "$JSON_LOG"
+
+# ─── Del 2: Webserver-status ─────────────────────────────────────────────────
+echo -e "\n▶️ Webtjenester (Apache/Nginx):" | tee -a "$TXT_LOG"
+apache_status=$(systemctl is-active apache2 || echo not-installed)
+nginx_status=$(systemctl is-active nginx || echo not-installed)
+
+echo "Apache: $apache_status" | tee -a "$TXT_LOG"
+echo "NGINX : $nginx_status" | tee -a "$TXT_LOG"
+
+echo '  "web_services": {' >> "$JSON_LOG"
+echo "    \"apache2\": \"$apache_status\"," >> "$JSON_LOG"
+echo "    \"nginx\": \"$nginx_status\"" >> "$JSON_LOG"
+echo "  }," >> "$JSON_LOG"
+
+# ─── Del 3: SSH-konfigurasjon ────────────────────────────────────────────────
+echo -e "\n▶️ SSH-konfig og rootbeskyttelse:" | tee -a "$TXT_LOG"
+permit_root=$(grep -Ei '^PermitRootLogin' /etc/ssh/sshd_config | awk '{print $2}' || echo unknown)
+password_auth=$(grep -Ei '^PasswordAuthentication' /etc/ssh/sshd_config | awk '{print $2}' || echo unknown)
+echo "PermitRootLogin: $permit_root" | tee -a "$TXT_LOG"
+echo "PasswordAuthentication: $password_auth" | tee -a "$TXT_LOG"
+
+echo '  "ssh_config": {' >> "$JSON_LOG"
+echo "    \"PermitRootLogin\": \"$permit_root\"," >> "$JSON_LOG"
+echo "    \"PasswordAuthentication\": \"$password_auth\"" >> "$JSON_LOG"
+echo "  }," >> "$JSON_LOG"
+
+# ─── Del 4: Åpne porter ──────────────────────────────────────────────────────
+echo -e "\n▶️ Aktive nettverkstjenester (åpne porter):" | tee -a "$TXT_LOG"
+ss -tulpn | grep LISTEN | tee -a "$TXT_LOG"
+echo '  "open_ports": [' >> "$JSON_LOG"
+ss -tulpn | grep LISTEN | awk '{print $5}' | sed 's/.*://g' | sort -u | sed 's/^/    "/;s/$/",/' >> "$JSON_LOG"
+echo "  ]," >> "$JSON_LOG"
+
+# ─── Del 5: Brukere med sudo-rettigheter ─────────────────────────────────────
+echo -e "\n▶️ Brukere med sudo/root-rettigheter:" | tee -a "$TXT_LOG"
+sudo_users=$(getent group sudo | cut -d: -f4)
+echo "$sudo_users" | tee -a "$TXT_LOG"
+
+echo '  "sudo_users": [' >> "$JSON_LOG"
+echo "$sudo_users" | sed 's/,/","/g; s/^/    "/; s/$/"/' >> "$JSON_LOG"
+echo "  ]," >> "$JSON_LOG"
+
+# ─── Del 6: Farlige filrettigheter ───────────────────────────────────────────
+echo -e "\n▶️ World-writable og setuid-filer (potensiell risiko):" | tee -a "$TXT_LOG"
+echo "📂 World Writable Files:" | tee -a "$TXT_LOG"
+find / -type f -perm -0002 -exec ls -lh {} \; 2>/dev/null | tee -a "$TXT_LOG"
+
+echo -e "\n📂 SetUID Files:" | tee -a "$TXT_LOG"
+find / -perm -4000 -type f 2>/dev/null | tee -a "$TXT_LOG"
+
+echo '  "dangerous_permissions": "Referer til txt-logg for detaljer",' >> "$JSON_LOG"
+
+# ─── Del 7: Aktiverte tjenester ──────────────────────────────────────────────
+echo -e "\n▶️ Aktive og aktiverte tjenester:" | tee -a "$TXT_LOG"
+systemctl list-unit-files --state=enabled | grep service | tee -a "$TXT_LOG"
+enabled_count=$(systemctl list-unit-files --state=enabled | grep service | wc -l)
+echo "Totalt: $enabled_count" | tee -a "$TXT_LOG"
+echo "  \"enabled_services_count\": $enabled_count," >> "$JSON_LOG"
+
+# ─── Del 8: Verktøyinstallasjoner ────────────────────────────────────────────
+echo -e "\n▶️ Overvåkings- og backupverktøy:" | tee -a "$TXT_LOG"
+echo '  "tools_installed": [' >> "$JSON_LOG"
+first_tool=true
+for tool in monit logrotate etckeeper rclone netdata; do
+  if command -v "$tool" >/dev/null; then
+    echo "✅ $tool er installert." | tee -a "$TXT_LOG"
+    if [ "$first_tool" = true ]; then
+      echo "    \"$tool\"" >> "$JSON_LOG"
+      first_tool=false
+    else
+      echo "    ,\"$tool\"" >> "$JSON_LOG"
+    fi
+  else
+    echo "❌ $tool mangler!" | tee -a "$TXT_LOG"
+  fi
+done
+echo "  ]," >> "$JSON_LOG"
+
+# ─── Del 9: Sluttsignatur og tid ─────────────────────────────────────────────
+now="$(date)"
+echo -e "\n✅ Sikkerhetsanalyse fullført: $now" | tee -a "$TXT_LOG"
+echo "  \"audit_completed\": \"$now\"" >> "$JSON_LOG"
+echo '}' >> "$JSON_LOG"
